@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sachin – AI Voice English Coach</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    html, body {
+      width:100%; height:100%; overflow:hidden;
+      background:#060d18;
+      font-family:'Segoe UI', Georgia, serif;
+      color:#e2f0f8;
+    }
+    #app {
+      position:fixed; inset:0;
+      display:flex; flex-direction:column;
+      background:linear-gradient(135deg,#060d18 0%,#0d1b2a 50%,#060d18 100%);
+    }
+    .glow1 {
+      position:fixed; top:10%; left:5%;
+      width:600px; height:600px; border-radius:50%;
+      background:radial-gradient(circle,rgba(16,185,129,0.06) 0%,transparent 70%);
+      pointer-events:none;
+    }
+    .glow2 {
+      position:fixed; bottom:10%; right:5%;
+      width:500px; height:500px; border-radius:50%;
+      background:radial-gradient(circle,rgba(59,130,246,0.06) 0%,transparent 70%);
+      pointer-events:none;
+    }
+
+    /* ── HEADER ── */
+    header {
+      display:flex; align-items:center; gap:14px;
+      padding:12px 20px;
+      border-bottom:1px solid rgba(110,231,183,0.12);
+      background:rgba(6,13,24,0.92);
+      backdrop-filter:blur(20px);
+      z-index:5; flex-shrink:0;
+    }
+    .h-avatar {
+      width:44px; height:44px; border-radius:50%;
+      background:linear-gradient(135deg,#10b981,#3b82f6);
+      display:flex; align-items:center; justify-content:center;
+      font-size:20px; box-shadow:0 0 20px rgba(16,185,129,0.4);
+      flex-shrink:0; position:relative;
+    }
+    .h-avatar.speaking::after {
+      content:'';
+      position:absolute; inset:-4px; border-radius:50%;
+      border:2px solid #10b981;
+      animation:ripple 1s ease-out infinite;
+    }
+    .h-name {
+      font-size:20px; font-weight:800; letter-spacing:3px;
+      background:linear-gradient(90deg,#6ee7b7,#93c5fd);
+      -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+    }
+    .h-sub { font-size:11px; color:rgba(110,231,183,0.55); letter-spacing:1px; margin-top:2px; }
+    .h-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
+    .h-dot {
+      width:9px; height:9px; border-radius:50%;
+      background:#10b981; box-shadow:0 0 10px #10b981;
+      animation:pulse 2s ease-in-out infinite;
+    }
+    /* Voice toggle button */
+    .voice-toggle {
+      padding:6px 14px; border-radius:20px;
+      background:rgba(16,185,129,0.1);
+      border:1px solid rgba(110,231,183,0.25);
+      color:#6ee7b7; font-size:12px; cursor:pointer;
+      transition:all 0.2s; letter-spacing:0.5px;
+    }
+    .voice-toggle:hover { background:rgba(16,185,129,0.2); }
+    .voice-toggle.on {
+      background:rgba(16,185,129,0.25);
+      border-color:rgba(110,231,183,0.5);
+      box-shadow:0 0 10px rgba(16,185,129,0.2);
+    }
+
+    /* ── CHAT ── */
+    #chat {
+      flex:1; overflow-y:auto; overflow-x:hidden;
+      padding:20px 16px;
+      display:flex; flex-direction:column; gap:14px;
+      scroll-behavior:smooth;
+    }
+    .msg-row { display:flex; align-items:flex-end; gap:10px; animation:fadeUp 0.3s ease; }
+    .msg-row.user { justify-content:flex-end; }
+    .msg-row.bot  { justify-content:flex-start; }
+    .msg-av {
+      width:32px; height:32px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:13px; flex-shrink:0;
+    }
+    .bot-av { background:linear-gradient(135deg,#10b981,#3b82f6); box-shadow:0 0 12px rgba(16,185,129,0.3); }
+    .user-av { background:linear-gradient(135deg,#1e3a5f,#1a4a6e); border:1px solid rgba(59,130,246,0.3); }
+    .bubble {
+      max-width:min(74%,640px);
+      padding:13px 17px; line-height:1.75;
+      font-size:14.5px; word-break:break-word; white-space:pre-wrap;
+    }
+    .bubble.bot {
+      background:rgba(13,21,35,0.92);
+      border:1px solid rgba(110,231,183,0.13);
+      border-radius:18px 18px 18px 4px; color:#ddeeff;
+      box-shadow:0 4px 20px rgba(0,0,0,0.3);
+    }
+    .bubble.user {
+      background:linear-gradient(135deg,#1e3a5f,#1a4a6e);
+      border:1px solid rgba(59,130,246,0.25);
+      border-radius:18px 18px 4px 18px; color:#bfdbfe;
+    }
+    .tip-block {
+      margin-top:12px; padding:10px 13px;
+      background:rgba(16,185,129,0.06);
+      border:1px solid rgba(110,231,183,0.18);
+      border-radius:10px; color:#86efac;
+      font-size:13.5px; line-height:1.7;
+    }
+    /* Speak button on bot messages */
+    .speak-btn {
+      margin-top:8px; padding:4px 12px;
+      background:transparent;
+      border:1px solid rgba(110,231,183,0.2);
+      border-radius:12px; color:rgba(110,231,183,0.6);
+      font-size:12px; cursor:pointer; transition:all 0.2s;
+    }
+    .speak-btn:hover { background:rgba(16,185,129,0.1); color:#6ee7b7; }
+
+    .typing { display:flex; gap:5px; padding:8px 4px; align-items:center; }
+    .dot { width:7px; height:7px; border-radius:50%; background:#6ee7b7; animation:bounce 1.2s ease-in-out infinite; }
+    .dot:nth-child(2){animation-delay:0.2s}
+    .dot:nth-child(3){animation-delay:0.4s}
+
+    /* ── FOOTER ── */
+    footer {
+      padding:12px 16px 16px;
+      border-top:1px solid rgba(110,231,183,0.1);
+      background:rgba(6,13,24,0.92);
+      backdrop-filter:blur(20px); flex-shrink:0;
+    }
+    .input-row {
+      display:flex; gap:10px; align-items:flex-end;
+      max-width:900px; margin:0 auto;
+    }
+    #msgInput {
+      flex:1; padding:11px 16px;
+      background:rgba(13,21,35,0.85);
+      border:1px solid rgba(110,231,183,0.18);
+      border-radius:14px; color:#e2f0f8;
+      font-size:14.5px; font-family:'Segoe UI',serif;
+      resize:none; outline:none;
+      min-height:48px; max-height:130px; line-height:1.6;
+      transition:border-color 0.2s; overflow-y:auto;
+    }
+    #msgInput:focus{ border-color:rgba(110,231,183,0.35); }
+    #msgInput::placeholder{ color:rgba(110,231,183,0.28); }
+
+    /* Mic button */
+    #micBtn {
+      width:48px; height:48px; border-radius:50%;
+      background:rgba(16,185,129,0.1);
+      border:1px solid rgba(110,231,183,0.25);
+      cursor:pointer; font-size:20px; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      transition:all 0.2s; color:white;
+    }
+    #micBtn:hover { background:rgba(16,185,129,0.2); }
+    #micBtn.listening {
+      background:rgba(239,68,68,0.2);
+      border-color:rgba(239,68,68,0.5);
+      box-shadow:0 0 20px rgba(239,68,68,0.3);
+      animation:micPulse 1s ease-in-out infinite;
+    }
+
+    #sendBtn {
+      width:48px; height:48px; border-radius:50%;
+      background:linear-gradient(135deg,#10b981,#3b82f6);
+      border:none; cursor:pointer; font-size:18px; flex-shrink:0;
+      box-shadow:0 4px 15px rgba(16,185,129,0.35);
+      transition:opacity 0.2s,transform 0.15s;
+      display:flex; align-items:center; justify-content:center; color:white;
+    }
+    #sendBtn:hover:not(:disabled){ opacity:0.88; transform:scale(1.05); }
+    #sendBtn:disabled{ opacity:0.4; cursor:not-allowed; box-shadow:none; }
+
+    .hint{ text-align:center; font-size:10.5px; color:rgba(110,231,183,0.28); margin-top:7px; letter-spacing:0.4px; }
+
+    /* Listening status bar */
+    #listenStatus {
+      display:none; text-align:center;
+      color:#f87171; font-size:13px; margin-bottom:6px;
+      animation:fadeUp 0.3s ease;
+    }
+    #listenStatus.active { display:block; }
+
+    .err-msg{ text-align:center; color:#f87171; font-size:13px; padding:6px; animation:fadeUp 0.3s ease; }
+
+    #chat::-webkit-scrollbar{ width:4px; }
+    #chat::-webkit-scrollbar-thumb{ background:rgba(110,231,183,0.15); border-radius:10px; }
+
+    @keyframes fadeUp{ from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pulse{ 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+    @keyframes bounce{ 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-7px)} }
+    @keyframes ripple{ 0%{transform:scale(1);opacity:0.8} 100%{transform:scale(1.6);opacity:0} }
+    @keyframes micPulse{ 0%,100%{box-shadow:0 0 20px rgba(239,68,68,0.3)} 50%{box-shadow:0 0 35px rgba(239,68,68,0.6)} }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="glow1"></div>
+  <div class="glow2"></div>
+
+  <header>
+    <div class="h-avatar" id="hAvatar">🤖</div>
+    <div>
+      <div class="h-name">SACHIN</div>
+      <div class="h-sub">AI VOICE COMPANION &amp; ENGLISH COACH</div>
+    </div>
+    <div class="h-right">
+      <button class="voice-toggle on" id="voiceToggle" onclick="toggleVoice()">🔊 Voice ON</button>
+      <div class="h-dot"></div>
+    </div>
+  </header>
+
+  <div id="chat"></div>
+
+  <footer>
+    <div id="listenStatus">🎤 Listening... speak now!</div>
+    <div class="input-row">
+      <textarea id="msgInput" rows="1"
+        placeholder='🎤 Press mic to speak  OR  type "Sachin, ..."'
+        onkeydown="handleKey(event)"
+        oninput="autoResize(this)"></textarea>
+      <button id="micBtn" onclick="toggleMic()" title="Hold to speak">🎤</button>
+      <button id="sendBtn" onclick="sendMessage()">➤</button>
+    </div>
+    <div class="hint">🎤 Mic = speak to Sachin &nbsp;·&nbsp; Enter = send text &nbsp;·&nbsp; 🔊 Toggle voice on/off</div>
+  </footer>
+</div>
+
+<script>
+  // ═══════════════════════════════════════
+  // CONFIG
+  // ═══════════════════════════════════════
+  let chatHistory = [];
+  let voiceEnabled = true;
+  let isListening  = false;
+  let recognition  = null;
+  let currentUtterance = null;
+
+  const SYSTEM = `You are Sachin, an advanced AI assistant and English language coach. You have a warm, friendly, human-like personality — like a brilliant caring friend. The user calls you "Sachin" and you respond naturally.
+
+Your dual role:
+1. CONVERSATIONAL ASSISTANT: Talk like a real human friend. Be engaging, warm, supportive. Help with any task — projects, questions, explanations, advice. Keep responses conversational and not too long.
+2. ENGLISH COACH: After every response, add a section separated by exactly "\\n---\\n" starting with "📝 Sachin's Language Tip" where you:
+   - Kindly point out grammar, spelling, or sentence structure mistakes
+   - Show the corrected version
+   - Give a short improvement tip
+   - If English is perfect, praise them warmly
+
+IMPORTANT: Keep your main response concise and natural — like how a human friend talks. Not too formal, not too long.`;
+
+  // ═══════════════════════════════════════
+  // INIT
+  // ═══════════════════════════════════════
+  window.onload = () => {
+    setupSpeechRecognition();
+    const welcome = `Hey there! 👋 I'm Sachin — your personal AI companion and English coach!\n\nI can:\n• 💬 Talk with you like a real human friend\n• 🛠️ Help you with any project or task\n• 📝 Correct your English after every message\n• 🎤 Listen to your voice and speak back to you!\n\nJust press the 🎤 mic button and talk, or type to me! 😊\n\n---\n📝 **Sachin's Language Tip**\nYour English journey starts now! Speak or type freely — I'll always guide you kindly! 🌟`;
+    addBotMessage(welcome, true);
+  };
+
+  // ═══════════════════════════════════════
+  // SPEECH RECOGNITION (Voice Input)
+  // ═══════════════════════════════════════
+  function setupSpeechRecognition() {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) return;
+
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'en-IN'; // Indian English
+
+    recognition.onstart = () => {
+      isListening = true;
+      document.getElementById('micBtn').classList.add('listening');
+      document.getElementById('micBtn').textContent = '⏹';
+      document.getElementById('listenStatus').classList.add('active');
+    };
+
+    recognition.onresult = (e) => {
+      let transcript = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      document.getElementById('msgInput').value = transcript;
+      autoResize(document.getElementById('msgInput'));
+      // If final result, auto send
+      if (e.results[e.results.length - 1].isFinal) {
+        setTimeout(() => sendMessage(), 600);
+      }
+    };
+
+    recognition.onend = () => {
+      isListening = false;
+      document.getElementById('micBtn').classList.remove('listening');
+      document.getElementById('micBtn').textContent = '🎤';
+      document.getElementById('listenStatus').classList.remove('active');
+    };
+
+    recognition.onerror = (e) => {
+      isListening = false;
+      document.getElementById('micBtn').classList.remove('listening');
+      document.getElementById('micBtn').textContent = '🎤';
+      document.getElementById('listenStatus').classList.remove('active');
+      if (e.error !== 'aborted') addError('Mic error: ' + e.error + '. Allow microphone access!');
+    };
+  }
+
+  function toggleMic() {
+    if (!recognition) { addError('Voice not supported in this browser. Use Chrome!'); return; }
+    if (isListening) {
+      recognition.stop();
+    } else {
+      stopSpeaking();
+      document.getElementById('msgInput').value = '';
+      recognition.start();
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // TEXT TO SPEECH (Voice Output)
+  // ═══════════════════════════════════════
+  function speak(text) {
+    if (!voiceEnabled || !window.speechSynthesis) return;
+    stopSpeaking();
+
+    // Clean text for speaking (remove markdown, emojis)
+    let clean = text
+      .replace(/\*\*/g, '')
+      .replace(/📝.*$/s, '') // remove tip section
+      .replace(/[^\w\s.,!?'"-]/g, '')
+      .trim();
+
+    if (!clean) return;
+
+    // Split into chunks to avoid cutoff on mobile
+    const chunks = splitIntoChunks(clean, 180);
+    let i = 0;
+
+    const speakChunk = () => {
+      if (i >= chunks.length) {
+        document.getElementById('hAvatar').classList.remove('speaking');
+        return;
+      }
+      const utter = new SpeechSynthesisUtterance(chunks[i]);
+      utter.lang  = 'en-IN';
+      utter.rate  = 0.92;
+      utter.pitch = 1.05;
+      utter.volume = 1;
+
+      // Try to pick a good voice
+      const voices = window.speechSynthesis.getVoices();
+      const preferred = voices.find(v =>
+        v.lang.startsWith('en') && (v.name.includes('Google') || v.name.includes('Natural') || v.name.includes('Premium'))
+      ) || voices.find(v => v.lang.startsWith('en'));
+      if (preferred) utter.voice = preferred;
+
+      utter.onstart = () => document.getElementById('hAvatar').classList.add('speaking');
+      utter.onend   = () => { i++; speakChunk(); };
+      utter.onerror = () => { i++; speakChunk(); };
+
+      currentUtterance = utter;
+      window.speechSynthesis.speak(utter);
+    };
+
+    speakChunk();
+  }
+
+  function stopSpeaking() {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    document.getElementById('hAvatar').classList.remove('speaking');
+  }
+
+  function splitIntoChunks(text, maxLen) {
+    const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+    const chunks = [];
+    let current = '';
+    for (const s of sentences) {
+      if ((current + s).length > maxLen) {
+        if (current) chunks.push(current.trim());
+        current = s;
+      } else {
+        current += s;
+      }
+    }
+    if (current.trim()) chunks.push(current.trim());
+    return chunks.length ? chunks : [text];
+  }
+
+  function toggleVoice() {
+    voiceEnabled = !voiceEnabled;
+    const btn = document.getElementById('voiceToggle');
+    if (voiceEnabled) {
+      btn.textContent = '🔊 Voice ON';
+      btn.classList.add('on');
+    } else {
+      btn.textContent = '🔇 Voice OFF';
+      btn.classList.remove('on');
+      stopSpeaking();
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // SEND MESSAGE
+  // ═══════════════════════════════════════
+  function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 130) + 'px';
+  }
+
+  async function sendMessage() {
+    const input = document.getElementById('msgInput');
+    const btn   = document.getElementById('sendBtn');
+    const text  = input.value.trim();
+    if (!text) return;
+
+    stopSpeaking();
+    input.value = ''; input.style.height = 'auto';
+    addUserMessage(text);
+    chatHistory.push({ role: 'user', content: text });
+    btn.disabled = true;
+    const typingId = addTyping();
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: chatHistory, system: SYSTEM })
+      });
+
+      removeTyping(typingId);
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error || `Error ${res.status}`);
+      }
+
+      const data  = await res.json();
+      const reply = data.reply || 'Sorry, I could not respond.';
+      chatHistory.push({ role: 'assistant', content: reply });
+      addBotMessage(reply, true);
+
+    } catch (err) {
+      removeTyping(typingId);
+      addError('⚠️ ' + (err.message || 'Connection error. Try again.'));
+    } finally {
+      btn.disabled = false;
+      input.focus();
+    }
+  }
+
+  // ═══════════════════════════════════════
+  // UI HELPERS
+  // ═══════════════════════════════════════
+  function addUserMessage(text) {
+    const chat = document.getElementById('chat');
+    const row  = document.createElement('div');
+    row.className = 'msg-row user';
+    row.innerHTML = `<div class="bubble user">${escHtml(text)}</div><div class="msg-av user-av">👤</div>`;
+    chat.appendChild(row); scrollBottom();
+  }
+
+  function addBotMessage(text, autoSpeak = false) {
+    const chat  = document.getElementById('chat');
+    const parts = text.split('\n---\n');
+    const main  = parts[0]?.trim() || '';
+    const tip   = parts.slice(1).join('\n---\n').trim();
+
+    const row = document.createElement('div');
+    row.className = 'msg-row bot';
+
+    let tipHtml = tip ? `<div class="tip-block">${fmt(tip)}</div>` : '';
+    const mainFmt = fmt(main);
+
+    row.innerHTML = `
+      <div class="msg-av bot-av">🤖</div>
+      <div class="bubble bot">
+        ${mainFmt}
+        ${tipHtml}
+        <button class="speak-btn" onclick="speak(this.dataset.text)" data-text="${escAttr(main)}">🔊 Hear Sachin</button>
+      </div>`;
+    chat.appendChild(row);
+    scrollBottom();
+
+    if (autoSpeak) {
+      // Small delay so voices are loaded
+      setTimeout(() => speak(main), 400);
+    }
+  }
+
+  function addTyping() {
+    const chat = document.getElementById('chat');
+    const id   = 'typing-' + Date.now();
+    const row  = document.createElement('div');
+    row.className = 'msg-row bot'; row.id = id;
+    row.innerHTML = `<div class="msg-av bot-av">🤖</div><div class="bubble bot"><div class="typing"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>`;
+    chat.appendChild(row); scrollBottom(); return id;
+  }
+
+  function removeTyping(id) { document.getElementById(id)?.remove(); }
+
+  function addError(msg) {
+    const chat = document.getElementById('chat');
+    const div  = document.createElement('div');
+    div.className = 'err-msg'; div.textContent = msg;
+    chat.appendChild(div); scrollBottom();
+  }
+
+  function scrollBottom() {
+    const c = document.getElementById('chat');
+    c.scrollTop = c.scrollHeight;
+  }
+
+  function fmt(text) {
+    let h = escHtml(text);
+    h = h.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    h = h.replace(/\n/g, '<br>');
+    return h;
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escAttr(s) {
+    return s.replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+
+  // Load voices on some browsers
+  window.speechSynthesis?.getVoices();
+  window.speechSynthesis?.addEventListener?.('voiceschanged', () => {});
+</script>
+</body>
+</html>
