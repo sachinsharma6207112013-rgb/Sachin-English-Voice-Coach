@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sachin AI Voice Coach</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-0: #050a14;
+      --bg-1: #0d1b2d;
+      --line: rgba(124, 240, 195, 0.18);
+      --line-2: rgba(132, 180, 255, 0.24);
+      --txt-main: #e6f1ff;
+      --txt-soft: #bcd1e6;
+      --mint: #7cf0c3;
+      --blue: #84b4ff;
+      --danger: #ff7e7e;
+    }
+
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 10% 5%, #12334a 0%, transparent 45%),
+                  radial-gradient(circle at 90% 95%, #1a2f55 0%, transparent 40%),
+                  linear-gradient(135deg, var(--bg-0), var(--bg-1));
+      color: var(--txt-main);
+      font-family: "Segoe UI", "Trebuchet MS", sans-serif;
+      overflow: hidden;
+    }
+
+    #app {
+      position: fixed;
+      inset: 0;
+      min-height: 100vh;
+      min-height: 100dvh;
+      height: var(--app-height, 100dvh);
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(10px);
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(3, 8, 16, 0.75);
+      flex-shrink: 0;
+    }
+
+    .avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(145deg, #2bc191, #4f91ef);
+      color: #031118;
+      font-weight: 900;
+      letter-spacing: 0.5px;
+      position: relative;
+    }
+
+    .avatar.speaking::after {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border: 2px solid rgba(124, 240, 195, 0.6);
+      border-radius: 50%;
+      animation: ripple 1s ease-out infinite;
+    }
+
+    .title-wrap { min-width: 0; }
+
+    .title {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: 1.2px;
+      color: var(--mint);
+    }
+
+    .subtitle {
+      font-size: 11px;
+      color: rgba(188, 209, 230, 0.7);
+      letter-spacing: 0.6px;
+      margin-top: 2px;
+      text-transform: uppercase;
+    }
+
+    .controls {
+      margin-left: auto;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      background: rgba(18, 35, 58, 0.75);
+      color: var(--txt-soft);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+
+    .pill:hover {
+      transform: translateY(-1px);
+      border-color: rgba(124, 240, 195, 0.45);
+    }
+
+    .pill.active {
+      color: #07141a;
+      background: linear-gradient(145deg, #85f0c9, #8db9ff);
+      border-color: transparent;
+      font-weight: 700;
+    }
+
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      scroll-behavior: smooth;
+    }
+
+    .msg-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      animation: fadeUp 0.22s ease;
+    }
+
+    .msg-row.user { justify-content: flex-end; }
+
+    .msg-bubble {
+      max-width: min(76%, 700px);
+      line-height: 1.6;
+      font-size: 14px;
+      padding: 12px 14px;
+      border: 1px solid transparent;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .msg-bubble.user {
+      border-radius: 16px 16px 4px 16px;
+      background: linear-gradient(135deg, #1f3f6f, #204c74);
+      border-color: var(--line-2);
+      color: #d7e9ff;
+    }
+
+    .msg-bubble.bot {
+      border-radius: 16px 16px 16px 4px;
+      background: rgba(7, 16, 30, 0.88);
+      border-color: var(--line);
+      color: var(--txt-main);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+    }
+
+    .msg-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .msg-avatar.user {
+      background: linear-gradient(145deg, #2f4b78, #366294);
+      color: #d2e5ff;
+      border: 1px solid var(--line-2);
+    }
+
+    .msg-avatar.bot {
+      background: linear-gradient(145deg, #2bc191, #4f91ef);
+      color: #041014;
+    }
+
+    .tip {
+      margin-top: 10px;
+      border: 1px solid rgba(124, 240, 195, 0.25);
+      background: rgba(22, 64, 53, 0.23);
+      border-radius: 10px;
+      color: #baf5df;
+      padding: 9px 10px;
+      font-size: 13px;
+    }
+
+    .bubble-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .speak-btn {
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--txt-soft);
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .speak-btn:hover { border-color: rgba(124, 240, 195, 0.5); color: var(--mint); }
+
+    .typing {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+      padding: 4px 2px;
+    }
+
+    .typing span {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--mint);
+      animation: bounce 1.1s infinite ease-in-out;
+    }
+
+    .typing span:nth-child(2) { animation-delay: 0.2s; }
+    .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+    footer {
+      border-top: 1px solid var(--line);
+      background: rgba(3, 8, 16, 0.8);
+      padding: 12px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+      flex-shrink: 0;
+    }
+
+    .status-bar {
+      min-height: 18px;
+      font-size: 12px;
+      margin-bottom: 8px;
+      color: var(--txt-soft);
+      text-align: center;
+    }
+
+    .status-bar.listening { color: var(--mint); }
+    .status-bar.error { color: var(--danger); }
+
+    .input-wrap {
+      max-width: 920px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      align-items: end;
+    }
+
+    #msgInput {
+      width: 100%;
+      min-height: 48px;
+      max-height: 130px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(9, 20, 34, 0.8);
+      color: var(--txt-main);
+      font-size: 14px;
+      line-height: 1.5;
+      padding: 11px 13px;
+      resize: none;
+      outline: none;
+      font-family: inherit;
+    }
+
+    #msgInput:focus { border-color: rgba(124, 240, 195, 0.5); }
+
+    .round-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: rgba(12, 30, 49, 0.9);
+      color: var(--txt-main);
+      cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      transition: transform 0.15s ease, opacity 0.2s ease;
+    }
+
+    .round-btn:hover { transform: translateY(-1px); }
+
+    .round-btn.primary {
+      border: none;
+      background: linear-gradient(145deg, #2bc191, #4f91ef);
+      color: #061118;
+    }
+
+    .round-btn.listening {
+      background: linear-gradient(145deg, #ef7373, #ff9c7b);
+      border-color: transparent;
+      color: #1a0606;
+      animation: micPulse 1s infinite;
+    }
+
+    .meta {
+      margin-top: 8px;
+      text-align: center;
+      font-size: 11px;
+      color: rgba(188, 209, 230, 0.62);
+    }
+
+    .user-chip {
+      border: 1px solid var(--line);
+      background: rgba(18, 35, 58, 0.6);
+      color: var(--txt-soft);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .pill.warn {
+      border-color: rgba(255, 126, 126, 0.4);
+      color: #ffcaca;
+      background: rgba(99, 25, 25, 0.25);
+    }
+
+    .pill.warn:hover {
+      border-color: rgba(255, 126, 126, 0.65);
+    }
+
+    .auth-gate {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 20;
+      background: rgba(4, 10, 20, 0.7);
+      backdrop-filter: blur(10px);
+      padding: 18px;
+    }
+
+    .auth-gate.hidden { display: none; }
+
+    .auth-card {
+      width: min(430px, 100%);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(4, 12, 24, 0.95);
+      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+      padding: 16px;
+    }
+
+    .auth-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: var(--mint);
+      letter-spacing: 0.7px;
+      margin-bottom: 4px;
+    }
+
+    .auth-sub {
+      font-size: 12px;
+      color: rgba(188, 209, 230, 0.8);
+      margin-bottom: 12px;
+    }
+
+    .auth-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .auth-fields {
+      display: grid;
+      gap: 8px;
+    }
+
+    .auth-input {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: rgba(9, 20, 34, 0.8);
+      color: var(--txt-main);
+      font-size: 14px;
+      padding: 10px 12px;
+      outline: none;
+    }
+
+    .auth-input:focus { border-color: rgba(124, 240, 195, 0.5); }
+
+    .auth-submit {
+      margin-top: 2px;
+      border: none;
+      border-radius: 11px;
+      background: linear-gradient(145deg, #2bc191, #4f91ef);
+      color: #061118;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      font-size: 13px;
+      padding: 10px 12px;
+      cursor: pointer;
+    }
+
+    .auth-status {
+      min-height: 18px;
+      margin-top: 10px;
+      color: var(--txt-soft);
+      font-size: 12px;
+    }
+
+    .auth-status.error { color: var(--danger); }
+
+    .auth-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    #chat::-webkit-scrollbar { width: 5px; }
+    #chat::-webkit-scrollbar-thumb { background: rgba(124, 240, 195, 0.25); border-radius: 10px; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-5px); }
+    }
+
+    @keyframes ripple {
+      0% { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(1.65); opacity: 0; }
+    }
+
+    @keyframes micPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(255, 140, 140, 0.5); }
+      50% { box-shadow: 0 0 0 10px rgba(255, 140, 140, 0); }
+    }
+
+    @media (max-width: 760px) {
+      .controls { width: 100%; margin-left: 0; }
+      .msg-bubble { max-width: 90%; }
+      .auth-card { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="avatar" id="headerAvatar">S</div>
+      <div class="title-wrap">
+        <div class="title">SACHIN</div>
+        <div class="subtitle" id="sessionLabel">Session: loading...</div>
+      </div>
+      <div class="controls">
+        <div class="user-chip" id="userChip">Guest</div>
+        <button class="pill" id="loginOpenBtn">Login</button>
+        <button class="pill warn" id="logoutBtn" style="display:none;">Logout</button>
+        <button class="pill" id="fullscreenToggle">Full Screen</button>
+        <button class="pill active" id="voiceToggle">Voice On</button>
+        <button class="pill" id="liveToggle">Live Off</button>
+        <button class="pill" id="newChatBtn">New Chat</button>
+      </div>
+    </header>
+
+    <div id="chat"></div>
+
+    <footer>
+      <div id="statusBar" class="status-bar"></div>
+      <div class="input-wrap">
+        <textarea
+          id="msgInput"
+          rows="1"
+          placeholder="Press MIC to talk or type your message"
+        ></textarea>
+        <button class="round-btn" id="micBtn" title="Start voice input">MIC</button>
+        <button class="round-btn primary" id="sendBtn" title="Send message">SEND</button>
+      </div>
+      <div class="meta" id="storageMeta">History: local only</div>
+    </footer>
+  </div>
+
+  <div class="auth-gate hidden" id="authGate">
+    <div class="auth-card">
+      <div class="auth-title">Account Required</div>
+      <div class="auth-sub">Sign up or log in to continue chatting.</div>
+
+      <div class="auth-tabs">
+        <button class="pill active" id="signupTab">Sign Up</button>
+        <button class="pill" id="loginTab">Login</button>
+      </div>
+
+      <div class="auth-fields" id="signupFields">
+        <input class="auth-input" id="signupName" type="text" placeholder="Full name" autocomplete="name" />
+        <input class="auth-input" id="signupEmail" type="email" placeholder="Email" autocomplete="email" />
+        <input class="auth-input" id="signupPassword" type="password" placeholder="Password (min 6 chars)" autocomplete="new-password" />
+        <button class="auth-submit" id="signupBtn">Create Account</button>
+      </div>
+
+      <div class="auth-fields" id="loginFields" style="display:none;">
+        <input class="auth-input" id="loginEmail" type="email" placeholder="Email" autocomplete="username" />
+        <input class="auth-input" id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" />
+        <button class="auth-submit" id="loginBtn">Login</button>
+      </div>
+
+      <div class="auth-status" id="authStatus"></div>
+      <div class="auth-actions">
+        <button class="pill" id="authCloseBtn">Continue as Guest</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SYSTEM_PROMPT = `You are Sachin, an advanced AI assistant and English language coach.
+
+Your dual role:
+1. Conversational assistant: be warm, practical, and concise.
+2. English coach: after every response add "\\n---\\n" and a section titled "Sachin Language Tip" with correction and a short tip.
+
+Keep the main answer natural and not overly long.`;
+
+    const STORAGE_SESSION_KEY = 'sachin_session_id';
+    const STORAGE_PREFS_KEY = 'sachin_user_prefs';
+    const STORAGE_USER_KEY = 'sachin_user';
+    const STORAGE_GUEST_QUESTIONS_KEY = 'sachin_guest_questions';
+    const GUEST_QUESTION_LIMIT = 3;
+
+    let sessionId = '';
+    let chatHistory = [];
+    let currentUser = null;
+    let guestQuestionCount = 0;
+
+    let voiceEnabled = true;
+    let liveMode = false;
+
+    let recognition = null;
+    let isListening = false;
+    let isSpeaking = false;
+    let isSending = false;
+
+    let listenTimer = null;
+    let appReady = false;
+
+    const chatEl = document.getElementById('chat');
+    const inputEl = document.getElementById('msgInput');
+    const sendBtn = document.getElementById('sendBtn');
+    const micBtn = document.getElementById('micBtn');
+    const voiceToggle = document.getElementById('voiceToggle');
+    const liveToggle = document.getElementById('liveToggle');
+    const newChatBtn = document.getElementById('newChatBtn');
+    const statusBar = document.getElementById('statusBar');
+    const headerAvatar = document.getElementById('headerAvatar');
+    const sessionLabel = document.getElementById('sessionLabel');
+    const storageMeta = document.getElementById('storageMeta');
+    const userChip = document.getElementById('userChip');
+    const loginOpenBtn = document.getElementById('loginOpenBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const fullscreenToggle = document.getElementById('fullscreenToggle');
+    const authGate = document.getElementById('authGate');
+    const authStatus = document.getElementById('authStatus');
+    const authCloseBtn = document.getElementById('authCloseBtn');
+    const signupTab = document.getElementById('signupTab');
+    const loginTab = document.getElementById('loginTab');
+    const signupFields = document.getElementById('signupFields');
+    const loginFields = document.getElementById('loginFields');
+    const signupName = document.getElementById('signupName');
+    const signupEmail = document.getElementById('signupEmail');
+    const signupPassword = document.getElementById('signupPassword');
+    const loginEmail = document.getElementById('loginEmail');
+    const loginPassword = document.getElementById('loginPassword');
+    const signupBtn = document.getElementById('signupBtn');
+    const loginBtn = document.getElementById('loginBtn');
+
+    let authForced = false;
+
+    window.addEventListener('DOMContentLoaded', init);
+
+    async function init() {
+      setAppViewportHeight();
+      restorePrefs();
+      bindEvents();
+      setupSpeechRecognition();
+      restoreUser();
+      restoreGuestQuestionCount();
+      updateUserChip();
+      updateFullscreenToggle();
+
+      await startAppSession();
+
+      if (!currentUser && isGuestLocked()) {
+        enforceGuestLogin('Free questions finished. Login to continue.');
+      }
+    }
+
+    function bindEvents() {
+      window.addEventListener('resize', setAppViewportHeight);
+      window.addEventListener('orientationchange', () => {
+        setTimeout(setAppViewportHeight, 150);
+      });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', setAppViewportHeight);
+      }
+
+      sendBtn.addEventListener('click', () => sendMessage());
+      micBtn.addEventListener('click', toggleMic);
+      voiceToggle.addEventListener('click', toggleVoice);
+      liveToggle.addEventListener('click', toggleLiveMode);
+      newChatBtn.addEventListener('click', startNewChat);
+      loginOpenBtn.addEventListener('click', () => openAuthGate({ mode: 'login' }));
+      logoutBtn.addEventListener('click', logout);
+      fullscreenToggle.addEventListener('click', toggleFullscreen);
+      document.addEventListener('fullscreenchange', updateFullscreenToggle);
+      signupTab.addEventListener('click', () => switchAuthMode('signup'));
+      loginTab.addEventListener('click', () => switchAuthMode('login'));
+      signupBtn.addEventListener('click', () => signup());
+      loginBtn.addEventListener('click', () => login());
+      authCloseBtn.addEventListener('click', closeAuthGate);
+
+      inputEl.addEventListener('input', () => autoResize(inputEl));
+      inputEl.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+          event.preventDefault();
+          sendMessage();
+        }
+      });
+
+      signupPassword.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') signup();
+      });
+
+      loginPassword.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') login();
+      });
+    }
+
+    async function startAppSession() {
+      unlockAfterAuth();
+      showAuthGate(false);
+
+      if (!appReady) {
+        chatHistory = [];
+        chatEl.innerHTML = '';
+      }
+
+      sessionId = localStorage.getItem(STORAGE_SESSION_KEY) || generateSessionId();
+      localStorage.setItem(STORAGE_SESSION_KEY, sessionId);
+      updateSessionLabel();
+
+      const loaded = await loadHistory();
+      if (!loaded) {
+        const welcome = [
+          `Welcome ${currentUser?.name || 'there'}. I am Sachin, your AI companion and English coach.`,
+          '',
+          'You can ask questions, practice English, and switch to Live Mode for hands-free voice turns.',
+          currentUser ? '' : `Guest mode allows ${GUEST_QUESTION_LIMIT} free questions before login.`,
+          '',
+          '---',
+          'Sachin Language Tip',
+          'Try short, clear prompts to get better answers quickly.'
+        ].join('\n');
+
+        addBotMessage(welcome, false);
+      }
+
+      appReady = true;
+      if (currentUser) {
+        setStatus('');
+      } else {
+        const remaining = getGuestRemainingQuestions();
+        setStatus(
+          `Guest mode: ${remaining} free question${remaining === 1 ? '' : 's'} left before login`
+        );
+      }
+
+      if (liveMode && recognition && !isGuestLocked()) {
+        startListeningSoon(250);
+      }
+
+      inputEl.focus();
+    }
+
+    function restoreUser() {
+      try {
+        const raw = localStorage.getItem(STORAGE_USER_KEY);
+        if (!raw) {
+          currentUser = null;
+          return;
+        }
+
+        const parsed = JSON.parse(raw);
+        if (!parsed || !parsed.id || !parsed.email) {
+          currentUser = null;
+          return;
+        }
+
+        currentUser = {
+          id: parsed.id,
+          name: parsed.name || 'User',
+          email: parsed.email
+        };
+      } catch {
+        currentUser = null;
+      }
+    }
+
+    function restoreGuestQuestionCount() {
+      try {
+        // Cleanup from older versions that used localStorage.
+        localStorage.removeItem(STORAGE_GUEST_QUESTIONS_KEY);
+        const raw = sessionStorage.getItem(STORAGE_GUEST_QUESTIONS_KEY);
+        const parsed = Number(raw);
+        if (!Number.isFinite(parsed) || parsed < 0) {
+          guestQuestionCount = 0;
+        } else {
+          guestQuestionCount = Math.min(Math.floor(parsed), GUEST_QUESTION_LIMIT);
+        }
+      } catch {
+        guestQuestionCount = 0;
+      }
+    }
+
+    function saveGuestQuestionCount() {
+      sessionStorage.setItem(STORAGE_GUEST_QUESTIONS_KEY, String(guestQuestionCount));
+    }
+
+    function resetGuestQuestionCount() {
+      guestQuestionCount = 0;
+      saveGuestQuestionCount();
+    }
+
+    function markGuestQuestionUsed() {
+      if (currentUser) return;
+      guestQuestionCount = Math.min(guestQuestionCount + 1, GUEST_QUESTION_LIMIT);
+      saveGuestQuestionCount();
+    }
+
+    function getGuestRemainingQuestions() {
+      return Math.max(0, GUEST_QUESTION_LIMIT - guestQuestionCount);
+    }
+
+    function isGuestLocked() {
+      return !currentUser && guestQuestionCount >= GUEST_QUESTION_LIMIT;
+    }
+
+    function saveUser(user) {
+      currentUser = {
+        id: user.id,
+        name: user.name || 'User',
+        email: user.email
+      };
+
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(currentUser));
+      resetGuestQuestionCount();
+      updateUserChip();
+    }
+
+    function clearUser() {
+      currentUser = null;
+      localStorage.removeItem(STORAGE_USER_KEY);
+      updateUserChip();
+    }
+
+    function updateUserChip() {
+      userChip.textContent = currentUser?.name || 'Guest';
+      loginOpenBtn.style.display = currentUser ? 'none' : '';
+      logoutBtn.style.display = currentUser ? '' : 'none';
+    }
+
+    function showAuthGate(show) {
+      authGate.classList.toggle('hidden', !show);
+    }
+
+    function setAuthStatus(text, isError = false) {
+      authStatus.textContent = text || '';
+      authStatus.classList.toggle('error', Boolean(isError));
+    }
+
+    function openAuthGate({ mode = 'login', message = '', isError = false, forced = false } = {}) {
+      authForced = forced;
+      lockForAuth();
+      switchAuthMode(mode);
+      showAuthGate(true);
+      authCloseBtn.style.display = forced ? 'none' : '';
+      setAuthStatus(message, isError);
+      if (!message) {
+        setStatus('Sign in to continue.');
+      }
+    }
+
+    function closeAuthGate() {
+      if (authForced) return;
+
+      setAuthStatus('');
+      showAuthGate(false);
+      unlockAfterAuth();
+      if (currentUser) {
+        setStatus('');
+      } else {
+        const remaining = getGuestRemainingQuestions();
+        setStatus(
+          `Guest mode: ${remaining} free question${remaining === 1 ? '' : 's'} left before login`
+        );
+      }
+      inputEl.focus();
+    }
+
+    function switchAuthMode(mode) {
+      const signupMode = mode !== 'login';
+
+      signupTab.classList.toggle('active', signupMode);
+      loginTab.classList.toggle('active', !signupMode);
+      signupFields.style.display = signupMode ? '' : 'none';
+      loginFields.style.display = signupMode ? 'none' : '';
+      setAuthStatus('');
+
+      if (signupMode) {
+        signupName.focus();
+      } else {
+        loginEmail.focus();
+      }
+    }
+
+    function enforceGuestLogin(message = 'Free questions finished. Login to continue.') {
+      openAuthGate({ mode: 'login', message, isError: true, forced: true });
+      setStatus(message, 'error');
+    }
+
+    function lockForAuth() {
+      stopSpeaking();
+      clearListenTimer();
+
+      if (isListening && recognition) {
+        recognition.stop();
+      }
+
+      inputEl.disabled = true;
+      sendBtn.disabled = true;
+      micBtn.disabled = true;
+      voiceToggle.disabled = true;
+      liveToggle.disabled = true;
+      newChatBtn.disabled = true;
+      storageMeta.textContent = 'History: login required';
+      sessionLabel.textContent = 'Session: locked';
+    }
+
+    function unlockAfterAuth() {
+      inputEl.disabled = false;
+      sendBtn.disabled = false;
+      voiceToggle.disabled = false;
+      newChatBtn.disabled = false;
+      micBtn.disabled = !recognition;
+      liveToggle.disabled = !recognition;
+    }
+
+    async function signup() {
+      const payload = {
+        action: 'signup',
+        name: signupName.value.trim(),
+        email: signupEmail.value.trim(),
+        password: signupPassword.value
+      };
+
+      await submitAuth(payload);
+    }
+
+    async function login() {
+      const payload = {
+        action: 'login',
+        email: loginEmail.value.trim(),
+        password: loginPassword.value
+      };
+
+      await submitAuth(payload);
+    }
+
+    async function submitAuth(payload) {
+      setAuthStatus('Please wait...');
+      signupBtn.disabled = true;
+      loginBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || `Auth failed (${response.status})`);
+        }
+
+        if (!data?.user?.id) {
+          throw new Error('Invalid auth response');
+        }
+
+        saveUser(data.user);
+        authForced = false;
+        appReady = false;
+        localStorage.setItem(STORAGE_SESSION_KEY, generateSessionId());
+        signupPassword.value = '';
+        loginPassword.value = '';
+        setAuthStatus('');
+        showAuthGate(false);
+        await startAppSession();
+      } catch (err) {
+        setAuthStatus(err.message || 'Authentication failed', true);
+      } finally {
+        signupBtn.disabled = false;
+        loginBtn.disabled = false;
+      }
+    }
+
+    async function logout() {
+      clearListenTimer();
+      stopSpeaking();
+
+      if (isListening && recognition) {
+        recognition.stop();
+      }
+
+      try {
+        await fetch('/api/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'logout' })
+        });
+      } catch {
+        // No-op: client-side logout is still valid.
+      }
+
+      clearUser();
+      resetGuestQuestionCount();
+      appReady = false;
+      chatHistory = [];
+      chatEl.innerHTML = '';
+      localStorage.removeItem(STORAGE_SESSION_KEY);
+      setAuthStatus('');
+      await startAppSession();
+      openAuthGate({ mode: 'login', message: 'Logged out successfully.' });
+    }
+
+    function setAppViewportHeight() {
+      const viewportHeight = window.visualViewport?.height || window.innerHeight || document.documentElement.clientHeight;
+      if (!viewportHeight) return;
+
+      document.documentElement.style.setProperty('--app-height', `${Math.round(viewportHeight)}px`);
+    }
+
+    function updateFullscreenToggle() {
+      const isFullscreen = Boolean(document.fullscreenElement);
+      fullscreenToggle.textContent = isFullscreen ? 'Exit Full' : 'Full Screen';
+      fullscreenToggle.classList.toggle('active', isFullscreen);
+    }
+
+    async function toggleFullscreen() {
+      try {
+        if (!document.fullscreenEnabled) {
+          setStatus('Fullscreen not supported on this device.', 'error');
+          return;
+        }
+
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else {
+          await document.documentElement.requestFullscreen();
+        }
+      } catch {
+        setStatus('Unable to switch fullscreen mode.', 'error');
+      }
+    }
+
+    function generateSessionId() {
+      if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+        return window.crypto.randomUUID();
+      }
+
+      const rand = Math.random().toString(36).slice(2, 10);
+      return `session_${Date.now()}_${rand}`;
+    }
+
+    function updateSessionLabel() {
+      const shortId = sessionId.length > 12 ? sessionId.slice(0, 12) + '...' : sessionId;
+      sessionLabel.textContent = `Session: ${shortId}`;
+    }
+
+    function restorePrefs() {
+      try {
+        const raw = localStorage.getItem(STORAGE_PREFS_KEY);
+        if (!raw) {
+          updateVoiceToggle();
+          updateLiveToggle();
+          return;
+        }
+
+        const prefs = JSON.parse(raw);
+        voiceEnabled = prefs.voiceEnabled !== false;
+        liveMode = Boolean(prefs.liveMode);
+      } catch {
+        voiceEnabled = true;
+        liveMode = false;
+      }
+
+      updateVoiceToggle();
+      updateLiveToggle();
+    }
+
+    function savePrefs() {
+      localStorage.setItem(STORAGE_PREFS_KEY, JSON.stringify({
+        voiceEnabled,
+        liveMode
+      }));
+    }
+
+    function updateVoiceToggle() {
+      voiceToggle.textContent = voiceEnabled ? 'Voice On' : 'Voice Off';
+      voiceToggle.classList.toggle('active', voiceEnabled);
+    }
+
+    function updateLiveToggle() {
+      liveToggle.textContent = liveMode ? 'Live On' : 'Live Off';
+      liveToggle.classList.toggle('active', liveMode);
+    }
+
+    function setStatus(text, type = '') {
+      statusBar.textContent = text || '';
+      statusBar.className = 'status-bar';
+
+      if (type) {
+        statusBar.classList.add(type);
+      }
+    }
+
+    async function loadHistory() {
+      try {
+        const res = await fetch(`/api/history?sessionId=${encodeURIComponent(sessionId)}`);
+        if (!res.ok) {
+          storageMeta.textContent = 'History: local only';
+          return false;
+        }
+
+        const data = await res.json();
+
+        if (!data.database) {
+          storageMeta.textContent = 'History: local only';
+          return false;
+        }
+
+        storageMeta.textContent = 'History: database enabled';
+
+        if (!Array.isArray(data.messages) || data.messages.length === 0) {
+          return false;
+        }
+
+        const restored = data.messages
+          .filter((m) => m && typeof m.content === 'string')
+          .map((m) => ({
+            role: m.role === 'assistant' ? 'assistant' : 'user',
+            content: m.content
+          }));
+
+        chatHistory = restored;
+
+        for (const msg of restored) {
+          if (msg.role === 'assistant') {
+            addBotMessage(msg.content, false);
+          } else {
+            addUserMessage(msg.content);
+          }
+        }
+
+        return true;
+      } catch {
+        storageMeta.textContent = 'History: unavailable';
+        return false;
+      }
+    }
+
+    function toggleVoice() {
+      voiceEnabled = !voiceEnabled;
+      updateVoiceToggle();
+      savePrefs();
+
+      if (!voiceEnabled) {
+        stopSpeaking();
+      }
+    }
+
+    function toggleLiveMode() {
+      if (isGuestLocked()) {
+        enforceGuestLogin();
+        return;
+      }
+
+      if (!recognition) {
+        addError('Live mode requires SpeechRecognition support (Chrome/Edge).');
+        return;
+      }
+
+      liveMode = !liveMode;
+      updateLiveToggle();
+      savePrefs();
+
+      if (liveMode) {
+        setStatus('Live mode active', 'listening');
+        startListeningSoon(100);
+      } else {
+        clearListenTimer();
+        if (isListening) {
+          recognition.stop();
+        }
+
+        setStatus('Live mode paused');
+      }
+    }
+
+    function setupSpeechRecognition() {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        micBtn.disabled = true;
+        liveToggle.disabled = true;
+        addError('Voice input is not supported in this browser.');
+        return;
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        isListening = true;
+        micBtn.classList.add('listening');
+        micBtn.textContent = 'STOP';
+        setStatus('Listening...', 'listening');
+      };
+
+      recognition.onresult = (event) => {
+        let finalText = '';
+        let interimText = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i += 1) {
+          const segment = event.results[i][0].transcript;
+          if (event.results[i].isFinal) {
+            finalText += segment;
+          } else {
+            interimText += segment;
+          }
+        }
+
+        const value = (finalText || interimText).trim();
+        if (value) {
+          inputEl.value = value;
+          autoResize(inputEl);
+        }
+
+        if (finalText.trim()) {
+          setTimeout(() => sendMessage(), 250);
+        }
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        micBtn.classList.remove('listening');
+        micBtn.textContent = 'MIC';
+
+        if (liveMode && !isSending && !isSpeaking) {
+          startListeningSoon(350);
+        } else if (!liveMode) {
+          if (currentUser) {
+            setStatus('');
+          } else {
+            const remaining = getGuestRemainingQuestions();
+            if (remaining > 0) {
+              setStatus(
+                `Guest mode: ${remaining} free question${remaining === 1 ? '' : 's'} left before login`
+              );
+            } else {
+              setStatus('Free questions finished. Login to continue.', 'error');
+            }
+          }
+        }
+      };
+
+      recognition.onerror = (event) => {
+        isListening = false;
+        micBtn.classList.remove('listening');
+        micBtn.textContent = 'MIC';
+
+        if (event.error !== 'aborted') {
+          addError(`Mic error: ${event.error}`);
+        }
+
+        if (liveMode && !isSending && !isSpeaking) {
+          startListeningSoon(800);
+        }
+      };
+    }
+
+    function clearListenTimer() {
+      if (listenTimer) {
+        clearTimeout(listenTimer);
+        listenTimer = null;
+      }
+    }
+
+    function startListeningSoon(delay = 250) {
+      if (!recognition) return;
+      clearListenTimer();
+
+      listenTimer = setTimeout(() => {
+        if (!liveMode || isListening || isSending || isSpeaking) {
+          return;
+        }
+
+        try {
+          recognition.start();
+        } catch {
+          // SpeechRecognition can throw if called too quickly.
+        }
+      }, delay);
+    }
+
+    function toggleMic() {
+      if (isGuestLocked()) {
+        enforceGuestLogin();
+        return;
+      }
+
+      if (!recognition) {
+        addError('Voice input is not available in this browser.');
+        return;
+      }
+
+      clearListenTimer();
+
+      if (isListening) {
+        recognition.stop();
+        return;
+      }
+
+      if (isSpeaking) {
+        stopSpeaking();
+      }
+
+      try {
+        recognition.start();
+      } catch {
+        addError('Unable to start microphone. Try again.');
+      }
+    }
+
+    async function sendMessage() {
+      if (isSending) return;
+      if (isGuestLocked()) {
+        enforceGuestLogin();
+        return;
+      }
+      if (!appReady) return;
+
+      const text = inputEl.value.trim();
+      if (!text) return;
+
+      clearListenTimer();
+
+      if (isListening && recognition) {
+        recognition.stop();
+      }
+
+      stopSpeaking();
+
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      addUserMessage(text);
+      chatHistory.push({ role: 'user', content: text });
+
+      const typingId = addTyping();
+
+      isSending = true;
+      sendBtn.disabled = true;
+      micBtn.disabled = true;
+      setStatus('Thinking...');
+      let shouldForceGuestLogin = false;
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId,
+            messages: chatHistory,
+            system: SYSTEM_PROMPT
+          })
+        });
+
+        removeTyping(typingId);
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.error || `Request failed (${response.status})`);
+        }
+
+        if (typeof data.sessionId === 'string' && data.sessionId) {
+          sessionId = data.sessionId;
+          localStorage.setItem(STORAGE_SESSION_KEY, sessionId);
+          updateSessionLabel();
+        }
+
+        storageMeta.textContent = data.database ? 'History: database enabled' : 'History: local only';
+
+        const reply = typeof data.reply === 'string' && data.reply ? data.reply : 'No response received.';
+        chatHistory.push({ role: 'assistant', content: reply });
+        addBotMessage(reply, true);
+        if (!currentUser) {
+          markGuestQuestionUsed();
+          const remaining = getGuestRemainingQuestions();
+
+          if (remaining > 0) {
+            setStatus(
+              `Guest mode: ${remaining} free question${remaining === 1 ? '' : 's'} left before login`
+            );
+          } else {
+            setStatus('Free questions finished. Login to continue.', 'error');
+            shouldForceGuestLogin = true;
+          }
+        } else {
+          setStatus('');
+        }
+      } catch (error) {
+        removeTyping(typingId);
+        addError(error.message || 'Network error');
+      } finally {
+        isSending = false;
+        sendBtn.disabled = false;
+        micBtn.disabled = false;
+
+        if (shouldForceGuestLogin) {
+          enforceGuestLogin('Free questions finished. Login to continue.');
+          return;
+        }
+
+        if (liveMode && !isSpeaking) {
+          startListeningSoon(250);
+        } else {
+          inputEl.focus();
+        }
+      }
+    }
+
+    function addUserMessage(text) {
+      const row = document.createElement('div');
+      row.className = 'msg-row user';
+      row.innerHTML = `
+        <div class="msg-bubble user">${escapeHtml(text)}</div>
+        <div class="msg-avatar user">YOU</div>
+      `;
+
+      chatEl.appendChild(row);
+      scrollBottom();
+    }
+
+    function addBotMessage(text, autoSpeak) {
+      const parts = String(text).split('\n---\n');
+      const main = (parts[0] || '').trim();
+      const tip = parts.slice(1).join('\n---\n').trim();
+
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+
+      const tipHtml = tip ? `<div class="tip">${formatText(tip)}</div>` : '';
+
+      row.innerHTML = `
+        <div class="msg-avatar bot">AI</div>
+        <div class="msg-bubble bot">
+          ${formatText(main)}
+          ${tipHtml}
+          <div class="bubble-actions">
+            <button class="speak-btn" data-speak="${escapeAttr(main)}">Speak</button>
+          </div>
+        </div>
+      `;
+
+      const btn = row.querySelector('.speak-btn');
+      btn.addEventListener('click', () => speak(btn.dataset.speak));
+
+      chatEl.appendChild(row);
+      scrollBottom();
+
+      if (autoSpeak) {
+        setTimeout(() => speak(main), 220);
+      }
+    }
+
+    function addTyping() {
+      const id = `typing_${Date.now()}`;
+      const row = document.createElement('div');
+      row.className = 'msg-row';
+      row.id = id;
+      row.innerHTML = `
+        <div class="msg-avatar bot">AI</div>
+        <div class="msg-bubble bot">
+          <div class="typing"><span></span><span></span><span></span></div>
+        </div>
+      `;
+
+      chatEl.appendChild(row);
+      scrollBottom();
+      return id;
+    }
+
+    function removeTyping(id) {
+      const el = document.getElementById(id);
+      if (el) el.remove();
+    }
+
+    function addError(message) {
+      setStatus(message, 'error');
+    }
+
+    function scrollBottom() {
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function autoResize(el) {
+      el.style.height = 'auto';
+      el.style.height = `${Math.min(el.scrollHeight, 130)}px`;
+    }
+
+    function cleanSpeechText(text) {
+      return String(text)
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/Sachin Language Tip[\s\S]*$/i, '')
+        .replace(/[^\w\s.,!?"'()\-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+    }
+
+    function splitSpeechChunks(text, size = 180) {
+      const segments = text.match(/[^.!?]+[.!?]*/g) || [text];
+      const chunks = [];
+      let current = '';
+
+      for (const segment of segments) {
+        if ((current + segment).length > size && current) {
+          chunks.push(current.trim());
+          current = segment;
+        } else {
+          current += segment;
+        }
+      }
+
+      if (current.trim()) chunks.push(current.trim());
+      return chunks.length ? chunks : [text];
+    }
+
+    function speak(text) {
+      if (!voiceEnabled || !window.speechSynthesis) {
+        if (liveMode && !isListening && !isSending) {
+          startListeningSoon(150);
+        }
+        return;
+      }
+
+      const clean = cleanSpeechText(text);
+      if (!clean) {
+        if (liveMode && !isListening && !isSending) {
+          startListeningSoon(150);
+        }
+        return;
+      }
+
+      stopSpeaking();
+
+      const chunks = splitSpeechChunks(clean);
+      let index = 0;
+
+      isSpeaking = true;
+      headerAvatar.classList.add('speaking');
+
+      const voices = window.speechSynthesis.getVoices();
+      const preferredVoice = voices.find((v) => v.lang.startsWith('en') && /Google|Neural|Premium|Natural/i.test(v.name))
+        || voices.find((v) => v.lang.startsWith('en'))
+        || null;
+
+      const speakNext = () => {
+        if (index >= chunks.length) {
+          isSpeaking = false;
+          headerAvatar.classList.remove('speaking');
+
+          if (liveMode && !isSending && !isListening) {
+            startListeningSoon(220);
+          }
+
+          return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(chunks[index]);
+        utterance.lang = 'en-US';
+        utterance.rate = 0.93;
+        utterance.pitch = 1.02;
+
+        if (preferredVoice) {
+          utterance.voice = preferredVoice;
+        }
+
+        utterance.onend = () => {
+          index += 1;
+          speakNext();
+        };
+
+        utterance.onerror = () => {
+          index += 1;
+          speakNext();
+        };
+
+        window.speechSynthesis.speak(utterance);
+      };
+
+      speakNext();
+    }
+
+    function stopSpeaking() {
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+
+      isSpeaking = false;
+      headerAvatar.classList.remove('speaking');
+    }
+
+    function formatText(text) {
+      return escapeHtml(String(text))
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function escapeAttr(value) {
+      return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    function startNewChat() {
+      if (isGuestLocked()) {
+        enforceGuestLogin();
+        return;
+      }
+
+      stopSpeaking();
+      clearListenTimer();
+
+      if (isListening && recognition) {
+        recognition.stop();
+      }
+
+      chatHistory = [];
+      chatEl.innerHTML = '';
+
+      sessionId = generateSessionId();
+      localStorage.setItem(STORAGE_SESSION_KEY, sessionId);
+      updateSessionLabel();
+
+      const intro = [
+        'New session started. What do you want to practice today?',
+        '',
+        '---',
+        'Sachin Language Tip',
+        'Use specific goals like "help me practice interview answers" for stronger guidance.'
+      ].join('\n');
+
+      addBotMessage(intro, false);
+      if (currentUser) {
+        setStatus('');
+      } else {
+        const remaining = getGuestRemainingQuestions();
+        setStatus(
+          `Guest mode: ${remaining} free question${remaining === 1 ? '' : 's'} left before login`
+        );
+      }
+      inputEl.focus();
+
+      if (liveMode) {
+        startListeningSoon(180);
+      }
+    }
+
+    if (window.speechSynthesis && typeof window.speechSynthesis.addEventListener === 'function') {
+      window.speechSynthesis.addEventListener('voiceschanged', () => {});
+    }
+  </script>
+</body>
+</html>
