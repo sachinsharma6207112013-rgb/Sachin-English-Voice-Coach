@@ -696,7 +696,7 @@
           <div class="group-label">Account</div>
           <div class="control-row">
             <div class="user-chip" id="userChip">Guest</div>
-            <button class="pill" id="loginOpenBtn">Login</button>
+            <button class="pill" id="loginOpenBtn">Sign Up / Login</button>
             <button class="pill warn" id="logoutBtn" style="display:none;">Logout</button>
           </div>
         </div>
@@ -864,7 +864,7 @@ Keep the main answer natural and not overly long.`;
       await startAppSession();
 
       if (!currentUser && isGuestLocked()) {
-        enforceGuestLogin('Free questions finished. Login to continue.');
+        enforceGuestLogin('Free questions finished. Sign up or login to continue.');
       }
     }
 
@@ -882,7 +882,7 @@ Keep the main answer natural and not overly long.`;
       voiceToggle.addEventListener('click', toggleVoice);
       liveToggle.addEventListener('click', toggleLiveMode);
       newChatBtn.addEventListener('click', startNewChat);
-      loginOpenBtn.addEventListener('click', () => openAuthGate({ mode: 'login' }));
+      loginOpenBtn.addEventListener('click', () => openAuthGate({ mode: 'signup' }));
       logoutBtn.addEventListener('click', logout);
       fullscreenToggle.addEventListener('click', toggleFullscreen);
       document.addEventListener('fullscreenchange', updateFullscreenToggle);
@@ -1107,8 +1107,8 @@ Keep the main answer natural and not overly long.`;
       }
     }
 
-    function enforceGuestLogin(message = 'Free questions finished. Login to continue.') {
-      openAuthGate({ mode: 'login', message, isError: true, forced: true });
+    function enforceGuestLogin(message = 'Free questions finished. Sign up or login to continue.') {
+      openAuthGate({ mode: 'signup', message, isError: true, forced: true });
       setStatus(message, 'error');
     }
 
@@ -1532,7 +1532,7 @@ Keep the main answer natural and not overly long.`;
                 `Guest mode: ${remaining} free question${remaining === 1 ? '' : 's'} left before login`
               );
             } else {
-              setStatus('Free questions finished. Login to continue.', 'error');
+              setStatus('Free questions finished. Sign up or login to continue.', 'error');
             }
           }
         }
@@ -1676,7 +1676,7 @@ Keep the main answer natural and not overly long.`;
               `Guest mode: ${remaining} free question${remaining === 1 ? '' : 's'} left before login`
             );
           } else {
-            setStatus('Free questions finished. Login to continue.', 'error');
+            setStatus('Free questions finished. Sign up or login to continue.', 'error');
             shouldForceGuestLogin = true;
           }
         } else {
@@ -1691,7 +1691,7 @@ Keep the main answer natural and not overly long.`;
         micBtn.disabled = false;
 
         if (shouldForceGuestLogin) {
-          enforceGuestLogin('Free questions finished. Login to continue.');
+          enforceGuestLogin('Free questions finished. Sign up or login to continue.');
           return;
         }
 
